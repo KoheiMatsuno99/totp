@@ -2,6 +2,7 @@ package main
 
 import (
 	"testing"
+	"time"
 )
 
 func TestGenerateSecret(t *testing.T) {
@@ -39,68 +40,42 @@ func TestGenerateSecret(t *testing.T) {
 }
 
 func TestTOTP_GenerateCode(t *testing.T) {
-	type fields struct {
-		Secret    string
-		Digits    int
-		Period    int64
-		Algorithm string
-	}
 	type args struct {
-		timestamp int64
+		timestamp *time.Time
 	}
 	tests := []struct {
 		name    string
-		fields  fields
+		Secret  string
 		args    args
 		want    string
 		wantErr bool
 	}{
 		{
-			name: "RFC6238テストベクター1",
-			fields: fields{
-				Secret:    "JBSWY3DPEHPK3PXP",
-				Digits:    6,
-				Period:    30,
-				Algorithm: "SHA1",
-			},
-			args:    args{timestamp: 59},
-			want:    "287082",
+			name:    "固定時刻でのコード生成",
+			Secret:  "JBSWY3DPEHPK3PXP",
+			args:    args{timestamp: func() *time.Time { t := time.Unix(1234567890, 0); return &t }()},
+			want:    "005924",
 			wantErr: false,
 		},
 		{
-			name: "RFC6238テストベクター2", 
-			fields: fields{
-				Secret:    "JBSWY3DPEHPK3PXP",
-				Digits:    6,
-				Period:    30,
-				Algorithm: "SHA1",
-			},
-			args:    args{timestamp: 1111111109},
-			want:    "081804",
+			name:    "別の固定時刻でのコード生成",
+			Secret:  "JBSWY3DPEHPK3PXP",
+			args:    args{timestamp: func() *time.Time { t := time.Unix(1111111111, 0); return &t }()},
+			want:    "050471",
 			wantErr: false,
 		},
 		{
-			name: "無効なシークレット",
-			fields: fields{
-				Secret:    "INVALID@SECRET!",
-				Digits:    6,
-				Period:    30,
-				Algorithm: "SHA1",
-			},
-			args:    args{timestamp: 59},
+			name:    "無効なシークレット",
+			Secret:  "INVALID@SECRET!",
+			args:    args{timestamp: func() *time.Time { t := time.Unix(1234567890, 0); return &t }()},
 			want:    "",
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tr := &TOTP{
-				Secret:    tt.fields.Secret,
-				Digits:    tt.fields.Digits,
-				Period:    tt.fields.Period,
-				Algorithm: tt.fields.Algorithm,
-			}
-			got, err := tr.GenerateCode(tt.args.timestamp)
+			totp := NewTOTP(tt.Secret)
+			got, err := totp.GenerateCode(tt.args.timestamp)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("TOTP.GenerateCode() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -113,98 +88,57 @@ func TestTOTP_GenerateCode(t *testing.T) {
 }
 
 func TestTOTP_Verify(t *testing.T) {
-	type fields struct {
-		Secret    string
-		Digits    int
-		Period    int64
-		Algorithm string
-	}
 	type args struct {
 		code      string
-		timestamp int64
+		timestamp *time.Time
 	}
 	tests := []struct {
 		name   string
-		fields fields
+		Secret string
 		args   args
 		want   bool
 	}{
 		{
-			name: "有効なコード",
-			fields: fields{
-				Secret:    "JBSWY3DPEHPK3PXP",
-				Digits:    6,
-				Period:    30,
-				Algorithm: "SHA1",
-			},
-			args: args{code: "287082", timestamp: 59},
-			want: true,
+			name:   "有効なコード",
+			Secret: "JBSWY3DPEHPK3PXP",
+			args:   args{code: "005924", timestamp: func() *time.Time { t := time.Unix(1234567890, 0); return &t }()},
+			want:   true,
 		},
 		{
-			name: "無効なコード",
-			fields: fields{
-				Secret:    "JBSWY3DPEHPK3PXP",
-				Digits:    6,
-				Period:    30,
-				Algorithm: "SHA1",
-			},
-			args: args{code: "123456", timestamp: 59},
-			want: false,
+			name:   "無効なコード",
+			Secret: "JBSWY3DPEHPK3PXP",
+			args:   args{code: "123456", timestamp: func() *time.Time { t := time.Unix(1234567890, 0); return &t }()},
+			want:   false,
 		},
 		{
-			name: "空のコード",
-			fields: fields{
-				Secret:    "JBSWY3DPEHPK3PXP",
-				Digits:    6,
-				Period:    30,
-				Algorithm: "SHA1",
-			},
-			args: args{code: "", timestamp: 59},
-			want: false,
+			name:   "空のコード",
+			Secret: "JBSWY3DPEHPK3PXP",
+			args:   args{code: "", timestamp: func() *time.Time { t := time.Unix(1234567890, 0); return &t }()},
+			want:   false,
 		},
 		{
-			name: "時間窓での検証（30秒前）",
-			fields: fields{
-				Secret:    "JBSWY3DPEHPK3PXP",
-				Digits:    6,
-				Period:    30,
-				Algorithm: "SHA1",
-			},
-			args: args{code: "287082", timestamp: 59 - 30},
-			want: true,
+			name:   "時間窓での検証（30秒前）",
+			Secret: "JBSWY3DPEHPK3PXP",
+			args:   args{code: "005924", timestamp: func() *time.Time { t := time.Unix(1234567890-30, 0); return &t }()},
+			want:   true,
 		},
 		{
-			name: "時間窓での検証（30秒後）",
-			fields: fields{
-				Secret:    "JBSWY3DPEHPK3PXP",
-				Digits:    6,
-				Period:    30,
-				Algorithm: "SHA1",
-			},
-			args: args{code: "287082", timestamp: 59 + 30},
-			want: true,
+			name:   "時間窓での検証（30秒後）",
+			Secret: "JBSWY3DPEHPK3PXP",
+			args:   args{code: "005924", timestamp: func() *time.Time { t := time.Unix(1234567890+30, 0); return &t }()},
+			want:   true,
 		},
 		{
-			name: "時間窓外（60秒前）",
-			fields: fields{
-				Secret:    "JBSWY3DPEHPK3PXP",
-				Digits:    6,
-				Period:    30,
-				Algorithm: "SHA1",
-			},
-			args: args{code: "287082", timestamp: 59 - 60},
-			want: false,
+			name:   "時間窓外（60秒前）",
+			Secret: "JBSWY3DPEHPK3PXP",
+			args:   args{code: "005924", timestamp: func() *time.Time { t := time.Unix(1234567890-60, 0); return &t }()},
+			want:   false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tr := &TOTP{
-				Secret:    tt.fields.Secret,
-				Digits:    tt.fields.Digits,
-				Period:    tt.fields.Period,
-				Algorithm: tt.fields.Algorithm,
-			}
-			if got := tr.Verify(tt.args.code, tt.args.timestamp); got != tt.want {
+			totp := NewTOTP(tt.Secret)
+			if got := totp.Verify(tt.args.code, tt.args.timestamp); got != tt.want {
 				t.Errorf("TOTP.Verify() = %v, want %v", got, tt.want)
 			}
 		})
@@ -212,12 +146,6 @@ func TestTOTP_Verify(t *testing.T) {
 }
 
 func TestTOTP_GenerateQRCode(t *testing.T) {
-	type fields struct {
-		Secret    string
-		Digits    int
-		Period    int64
-		Algorithm string
-	}
 	type args struct {
 		issuer   string
 		account  string
@@ -225,42 +153,27 @@ func TestTOTP_GenerateQRCode(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		fields  fields
+		Secret  string
 		args    args
 		wantErr bool
 	}{
 		{
-			name: "正常なQRコード生成",
-			fields: fields{
-				Secret:    "JBSWY3DPEHPK3PXP",
-				Digits:    6,
-				Period:    30,
-				Algorithm: "SHA1",
-			},
+			name:    "正常なQRコード生成",
+			Secret:  "JBSWY3DPEHPK3PXP",
 			args:    args{issuer: "TestApp", account: "user@example.com", filename: "test_qr.png"},
 			wantErr: false,
 		},
 		{
-			name: "無効なファイルパス",
-			fields: fields{
-				Secret:    "JBSWY3DPEHPK3PXP",
-				Digits:    6,
-				Period:    30,
-				Algorithm: "SHA1",
-			},
+			name:    "無効なファイルパス",
+			Secret:  "JBSWY3DPEHPK3PXP",
 			args:    args{issuer: "TestApp", account: "user@example.com", filename: "/invalid/path/test_qr.png"},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tr := &TOTP{
-				Secret:    tt.fields.Secret,
-				Digits:    tt.fields.Digits,
-				Period:    tt.fields.Period,
-				Algorithm: tt.fields.Algorithm,
-			}
-			if err := tr.GenerateQRCode(tt.args.issuer, tt.args.account, tt.args.filename); (err != nil) != tt.wantErr {
+			totp := NewTOTP(tt.Secret)
+			if err := totp.GenerateQRCode(tt.args.issuer, tt.args.account, tt.args.filename); (err != nil) != tt.wantErr {
 				t.Errorf("TOTP.GenerateQRCode() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

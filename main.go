@@ -34,7 +34,8 @@ func main() {
 
 	fmt.Println("\n=== TOTP コード生成テスト ===")
 	for i := range 3 {
-		code, err := totp.GenerateCode(0)
+		now := time.Now()
+		code, err := totp.GenerateCode(&now)
 		if err != nil {
 			log.Printf("コード生成エラー: %v", err)
 			continue
@@ -42,7 +43,8 @@ func main() {
 
 		fmt.Printf("現在のTOTPコード: %s\n", code)
 
-		isValid := totp.Verify(code, 0)
+		now2 := time.Now()
+		isValid := totp.Verify(code, &now2)
 		fmt.Printf("検証結果: %t\n", isValid)
 
 		if i < 2 {
@@ -53,6 +55,7 @@ func main() {
 
 	fmt.Println("\n=== 無効なコードのテスト ===")
 	invalidCode := "123456"
-	isValid := totp.Verify(invalidCode, 0)
+	now3 := time.Now()
+	isValid := totp.Verify(invalidCode, &now3)
 	fmt.Printf("無効なコード '%s' の検証結果: %t\n", invalidCode, isValid)
 }

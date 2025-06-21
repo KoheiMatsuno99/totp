@@ -39,12 +39,15 @@ func GenerateSecret() (string, error) {
 	return base32.StdEncoding.EncodeToString(key), nil
 }
 
-func (t *TOTP) GenerateCode(timestamp int64) (string, error) {
-	if timestamp == 0 {
-		timestamp = time.Now().Unix()
+func (t *TOTP) GenerateCode(timestamp *time.Time) (string, error) {
+	var ts int64
+	if timestamp == nil {
+		ts = time.Now().Unix()
+	} else {
+		ts = timestamp.Unix()
 	}
 
-	counter := timestamp / t.Period
+	counter := ts / t.Period
 
 	secretBytes, err := base32.StdEncoding.DecodeString(strings.ToUpper(t.Secret))
 	if err != nil {
@@ -65,14 +68,17 @@ func (t *TOTP) GenerateCode(timestamp int64) (string, error) {
 	return otp, nil
 }
 
-func (t *TOTP) Verify(code string, timestamp int64) bool {
-	if timestamp == 0 {
-		timestamp = time.Now().Unix()
+func (t *TOTP) Verify(code string, timestamp *time.Time) bool {
+	var ts int64
+	if timestamp == nil {
+		ts = time.Now().Unix()
+	} else {
+		ts = timestamp.Unix()
 	}
 
 	for i := -1; i <= 1; i++ {
-		testTime := timestamp + int64(i)*t.Period
-		expectedCode, err := t.GenerateCode(testTime)
+		testTime := time.Unix(ts+int64(i)*t.Period, 0)
+		expectedCode, err := t.GenerateCode(&testTime)
 		if err != nil {
 			return false
 		}
