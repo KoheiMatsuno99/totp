@@ -33,7 +33,7 @@ func main() {
 	}
 
 	fmt.Println("\n=== TOTP コード生成テスト ===")
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		code, err := totp.GenerateCode(0)
 		if err != nil {
 			log.Printf("コード生成エラー: %v", err)
