@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"time"
-	"totp/ctxtime"
 )
 
 func main() {
@@ -23,8 +22,7 @@ func main() {
 	fmt.Println("\n=== TOTP コード生成 ===")
 	for i := range 3 {
 		ctx := context.Background()
-		now := ctxtime.Now(ctx)
-		code, err := totp.GenerateCode(&now)
+		code, err := totp.GenerateCode(ctx)
 		if err != nil {
 			log.Printf("コード生成エラー: %v", err)
 			continue
@@ -32,8 +30,7 @@ func main() {
 
 		fmt.Printf("現在のTOTPコード: %s\n", code)
 
-		now2 := ctxtime.Now(ctx)
-		isValid := totp.Verify(code, &now2)
+		isValid := totp.Verify(ctx, code)
 		fmt.Printf("検証結果: %t\n", isValid)
 
 		if i < 2 {

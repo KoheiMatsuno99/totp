@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha1"
@@ -9,7 +10,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"time"
+	"totp/ctxtime"
 
 	"github.com/skip2/go-qrcode"
 )
@@ -39,13 +40,8 @@ func GenerateSecret() (string, error) {
 	return base32.StdEncoding.EncodeToString(key), nil
 }
 
-func (t *TOTP) GenerateCode(timestamp *time.Time) (string, error) {
-	var ts int64
-	if timestamp == nil {
-		ts = time.Now().Unix()
-	} else {
-		ts = timestamp.Unix()
-	}
+func (t *TOTP) GenerateCode(ctx context.Context) (string, error) {
+	ts := ctxtime.Now(ctx).Unix()
 
 	counter := ts / t.Period
 
@@ -68,20 +64,29 @@ func (t *TOTP) GenerateCode(timestamp *time.Time) (string, error) {
 	return otp, nil
 }
 
-func (t *TOTP) Verify(code string, timestamp *time.Time) bool {
-	var ts int64
-	if timestamp == nil {
-		ts = time.Now().Unix()
-	} else {
-		ts = timestamp.Unix()
-	}
+func (t *TOTP) Verify(ctx context.Context, code string) bool {
+	baseTs := ctxtime.Now(ctx).Unix()
 
 	for i := -1; i <= 1; i++ {
-		testTime := time.Unix(ts+int64(i)*t.Period, 0)
-		expectedCode, err := t.GenerateCode(&testTime)
+		ts := baseTs + int64(i)*t.Period
+		counter := ts / t.Period
+
+		secretBytes, err := base32.StdEncoding.DecodeString(strings.ToUpper(t.Secret))
 		if err != nil {
 			return false
 		}
+
+		buf := make([]byte, 8)
+		binary.BigEndian.PutUint64(buf, uint64(counter))
+
+		mac := hmac.New(sha1.New, secretBytes)
+		mac.Write(buf)
+		hash := mac.Sum(nil)
+
+		offset := hash[len(hash)-1] & 0x0F
+		totpCode := binary.BigEndian.Uint32(hash[offset:offset+4]) & 0x7FFFFFFF
+
+		expectedCode := fmt.Sprintf("%0*d", t.Digits, totpCode%uint32(math.Pow10(t.Digits)))
 		if code == expectedCode {
 			return true
 		}
