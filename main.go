@@ -21,10 +21,6 @@ func main() {
 	fmt.Println("Digits:", totp.Digits)
 	fmt.Println("Period:", totp.Period, "秒")
 
-	qrURL := totp.GetQRCodeURL("TestApp", "user@example.com")
-	fmt.Println("\nQRコードURL:")
-	fmt.Println(qrURL)
-
 	err = totp.GenerateQRCode("TestApp", "user@example.com", "qrcode.png")
 	if err != nil {
 		log.Printf("QRコード生成エラー: %v", err)

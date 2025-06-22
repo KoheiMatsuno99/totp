@@ -89,12 +89,12 @@ func (t *TOTP) Verify(code string, timestamp *time.Time) bool {
 	return false
 }
 
-func (t *TOTP) GetQRCodeURL(issuer, account string) string {
+func (t *TOTP) getQRCodeURL(issuer, account string) string {
 	return fmt.Sprintf("otpauth://totp/%s:%s?secret=%s&issuer=%s&digits=%d&period=%d&algorithm=%s",
 		issuer, account, t.Secret, issuer, t.Digits, t.Period, t.Algorithm)
 }
 
 func (t *TOTP) GenerateQRCode(issuer, account, filename string) error {
-	url := t.GetQRCodeURL(issuer, account)
+	url := t.getQRCodeURL(issuer, account)
 	return qrcode.WriteFile(url, qrcode.Medium, 256, filename)
 }
