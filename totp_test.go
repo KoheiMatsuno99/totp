@@ -148,38 +148,3 @@ func TestTOTP_Verify(t *testing.T) {
 		})
 	}
 }
-
-func TestTOTP_GenerateQRCode(t *testing.T) {
-	type args struct {
-		issuer   string
-		account  string
-		filename string
-	}
-	tests := []struct {
-		name    string
-		Secret  string
-		args    args
-		wantErr bool
-	}{
-		{
-			name:    "正常なQRコード生成",
-			Secret:  "JBSWY3DPEHPK3PXP",
-			args:    args{issuer: "TestApp", account: "user@example.com", filename: "test_qr.png"},
-			wantErr: false,
-		},
-		{
-			name:    "無効なファイルパス",
-			Secret:  "JBSWY3DPEHPK3PXP",
-			args:    args{issuer: "TestApp", account: "user@example.com", filename: "/invalid/path/test_qr.png"},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			totp := NewTOTP(tt.Secret)
-			if err := totp.GenerateQRCode(tt.args.issuer, tt.args.account, tt.args.filename); (err != nil) != tt.wantErr {
-				t.Errorf("TOTP.GenerateQRCode() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}

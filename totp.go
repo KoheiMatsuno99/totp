@@ -11,8 +11,6 @@ import (
 	"math"
 	"strings"
 	"totp/ctxtime"
-
-	"github.com/skip2/go-qrcode"
 )
 
 type TOTP struct {
@@ -94,12 +92,7 @@ func (t *TOTP) Verify(ctx context.Context, code string) bool {
 	return false
 }
 
-func (t *TOTP) getQRCodeURL(issuer, account string) string {
+func (t *TOTP) GetQRCodeURL(issuer, account string) string {
 	return fmt.Sprintf("otpauth://totp/%s:%s?secret=%s&issuer=%s&digits=%d&period=%d&algorithm=%s",
 		issuer, account, t.Secret, issuer, t.Digits, t.Period, t.Algorithm)
-}
-
-func (t *TOTP) GenerateQRCode(issuer, account, filename string) error {
-	url := t.getQRCodeURL(issuer, account)
-	return qrcode.WriteFile(url, qrcode.Medium, 256, filename)
 }

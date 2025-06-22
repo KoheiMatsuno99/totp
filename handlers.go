@@ -121,8 +121,8 @@ func (s *Server) qrHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	qrURL := user.getQRCodeURL("TOTPApp", email)
-	
+	qrURL := user.GetQRCodeURL("TOTPApp", email)
+
 	qrCode, err := qrcode.New(qrURL, qrcode.Medium)
 	if err != nil {
 		http.Error(w, "Failed to generate QR code", http.StatusInternalServerError)
