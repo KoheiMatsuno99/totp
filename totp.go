@@ -38,6 +38,7 @@ func GenerateSecret() (string, error) {
 	return base32.StdEncoding.EncodeToString(key), nil
 }
 
+// Authenticator側で生成するので、アプリケーションとしては不要
 func (t *TOTP) GenerateCode(ctx context.Context) (string, error) {
 	ts := ctxtime.Now(ctx).Unix()
 
