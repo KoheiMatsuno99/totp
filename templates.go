@@ -23,6 +23,9 @@ const LoginTemplate = `<!DOCTYPE html>
 	{{if .Error}}
 		<div class="error">{{.Error}}</div>
 	{{end}}
+	<div style="text-align: center; margin: 20px 0;">
+		<a href="/register" style="color: #28a745; text-decoration: none;">新規アカウント作成</a>
+	</div>
 </body>
 </html>`
 
@@ -54,12 +57,43 @@ const SetupTemplate = `<!DOCTYPE html>
 		</div>
 		<div class="qr-section">
 			<h3>QRコード:</h3>
-			<div style="font-family: monospace; font-size: 12px; word-break: break-all;">{{.QRUrl}}</div>
+			<img src="/qr?email={{.Email}}" alt="QR Code" style="max-width: 256px; margin: 10px;">
 			<br>
 			<h3>シークレットキー:</h3>
 			<div class="secret">{{.Secret}}</div>
 		</div>
 		<button onclick="location.href='/'">ログイン画面に戻る</button>
+	</div>
+</body>
+</html>`
+
+const RegisterTemplate = `<!DOCTYPE html>
+<html>
+<head>
+	<title>TOTP 新規登録</title>
+	<style>
+		body { font-family: Arial, sans-serif; max-width: 400px; margin: 100px auto; padding: 20px; }
+		form { background: #f5f5f5; padding: 30px; border-radius: 8px; }
+		input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
+		button { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+		button:hover { background: #218838; }
+		.info { background: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0; color: #0d47a1; }
+		.nav { text-align: center; margin: 20px 0; }
+		.nav a { color: #007bff; text-decoration: none; }
+	</style>
+</head>
+<body>
+	<h2>🔐 TOTP 新規登録</h2>
+	<div class="info">
+		<p>新しいTOTPアカウントを作成します。</p>
+		<p>メールアドレスを入力してセットアップを開始してください。</p>
+	</div>
+	<form method="POST" action="/register">
+		<input type="email" name="email" placeholder="メールアドレス" required>
+		<button type="submit">アカウント作成</button>
+	</form>
+	<div class="nav">
+		<a href="/">既存アカウントでログイン</a>
 	</div>
 </body>
 </html>`
