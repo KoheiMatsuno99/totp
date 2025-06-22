@@ -28,8 +28,9 @@ func (s *Server) registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	email := r.FormValue("email")
-	if email == "" {
+	emailStr := r.FormValue("email")
+	email, err := NewEmail(emailStr)
+	if err != nil {
 		http.Redirect(w, r, "/register", http.StatusSeeOther)
 		return
 	}
@@ -47,7 +48,7 @@ func (s *Server) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setupURL := fmt.Sprintf("/setup?email=%s&secret=%s",
-		url.QueryEscape(email),
+		url.QueryEscape(email.String()),
 		url.QueryEscape(user.Secret))
 	http.Redirect(w, r, setupURL, http.StatusSeeOther)
 }
@@ -58,11 +59,17 @@ func (s *Server) verifyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	email := r.FormValue("email")
+	emailStr := r.FormValue("email")
 	code := r.FormValue("code")
 
-	if email == "" || code == "" {
+	if emailStr == "" || code == "" {
 		http.Redirect(w, r, "/?error=メールアドレスとTOTPコードを入力してください", http.StatusSeeOther)
+		return
+	}
+
+	email, err := NewEmail(emailStr)
+	if err != nil {
+		http.Redirect(w, r, "/?error=無効なメールアドレス形式です", http.StatusSeeOther)
 		return
 	}
 
@@ -74,7 +81,7 @@ func (s *Server) verifyHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 	if user.Verify(ctx, code) {
-		http.Redirect(w, r, "/success?email="+email, http.StatusSeeOther)
+		http.Redirect(w, r, "/success?email="+email.String(), http.StatusSeeOther)
 	} else {
 		http.Redirect(w, r, "/?error=TOTPコードが正しくありません", http.StatusSeeOther)
 	}
@@ -82,9 +89,15 @@ func (s *Server) verifyHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) setupHandler(w http.ResponseWriter, r *http.Request) {
 	secret := r.URL.Query().Get("secret")
-	email := r.URL.Query().Get("email")
+	emailStr := r.URL.Query().Get("email")
 
-	if email == "" || secret == "" {
+	if emailStr == "" || secret == "" {
+		http.Redirect(w, r, "/register", http.StatusSeeOther)
+		return
+	}
+
+	email, err := NewEmail(emailStr)
+	if err != nil {
 		http.Redirect(w, r, "/register", http.StatusSeeOther)
 		return
 	}
@@ -94,7 +107,7 @@ func (s *Server) setupHandler(w http.ResponseWriter, r *http.Request) {
 		Email  string
 		Secret string
 	}{
-		Email:  email,
+		Email:  email.String(),
 		Secret: secret,
 	}
 	t.Execute(w, data)
@@ -109,9 +122,15 @@ func (s *Server) successHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) qrHandler(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("email")
-	if email == "" {
+	emailStr := r.URL.Query().Get("email")
+	if emailStr == "" {
 		http.Error(w, "Email parameter required", http.StatusBadRequest)
+		return
+	}
+
+	email, err := NewEmail(emailStr)
+	if err != nil {
+		http.Error(w, "Invalid email format", http.StatusBadRequest)
 		return
 	}
 
@@ -121,7 +140,7 @@ func (s *Server) qrHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	qrURL := user.GetQRCodeURL("TOTPApp", email)
+	qrURL := user.GetQRCodeURL("TOTPApp", email.String())
 
 	qrCode, err := qrcode.New(qrURL, qrcode.Medium)
 	if err != nil {
