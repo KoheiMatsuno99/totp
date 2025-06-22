@@ -12,23 +12,13 @@ func main() {
 		log.Fatal("シークレット生成エラー:", err)
 	}
 
-	fmt.Println("生成されたシークレット:", secret)
-
 	totp := NewTOTP(secret)
-
-	fmt.Println("\n=== TOTP設定情報 ===")
-	fmt.Println("Secret:", totp.Secret)
-	fmt.Println("Digits:", totp.Digits)
-	fmt.Println("Period:", totp.Period, "秒")
-
 	err = totp.GenerateQRCode("TestApp", "user@example.com", "qrcode.png")
 	if err != nil {
 		log.Printf("QRコード生成エラー: %v", err)
-	} else {
-		fmt.Println("\nQRコードをqrcode.pngに保存しました")
 	}
 
-	fmt.Println("\n=== TOTP コード生成テスト ===")
+	fmt.Println("\n=== TOTP コード生成 ===")
 	for i := range 3 {
 		now := time.Now()
 		code, err := totp.GenerateCode(&now)
@@ -45,13 +35,7 @@ func main() {
 
 		if i < 2 {
 			fmt.Println("30秒待機中...")
-			time.Sleep(30 * time.Second)
+			time.Sleep(time.Duration(totp.Period) * time.Second)
 		}
 	}
-
-	fmt.Println("\n=== 無効なコードのテスト ===")
-	invalidCode := "123456"
-	now3 := time.Now()
-	isValid := totp.Verify(invalidCode, &now3)
-	fmt.Printf("無効なコード '%s' の検証結果: %t\n", invalidCode, isValid)
 }
