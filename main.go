@@ -1,41 +1,20 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
-	"time"
+	"net/http"
 )
 
+
 func main() {
-	secret, err := GenerateSecret()
-	if err != nil {
-		log.Fatal("シークレット生成エラー:", err)
-	}
+	server := NewServer()
 
-	totp := NewTOTP(secret)
-	err = totp.GenerateQRCode("TestApp", "user@example.com", "qrcode.png")
-	if err != nil {
-		log.Printf("QRコード生成エラー: %v", err)
-	}
+	http.HandleFunc("/", server.loginHandler)
+	http.HandleFunc("/verify", server.verifyHandler)
+	http.HandleFunc("/setup", server.setupHandler)
+	http.HandleFunc("/success", server.successHandler)
 
-	fmt.Println("\n=== TOTP コード生成 ===")
-	for i := range 3 {
-		ctx := context.Background()
-		code, err := totp.GenerateCode(ctx)
-		if err != nil {
-			log.Printf("コード生成エラー: %v", err)
-			continue
-		}
-
-		fmt.Printf("現在のTOTPコード: %s\n", code)
-
-		isValid := totp.Verify(ctx, code)
-		fmt.Printf("検証結果: %t\n", isValid)
-
-		if i < 2 {
-			fmt.Println("30秒待機中...")
-			time.Sleep(time.Duration(totp.Period) * time.Second)
-		}
-	}
+	fmt.Println("サーバーを開始します: http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
