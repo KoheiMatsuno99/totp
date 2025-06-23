@@ -38,11 +38,8 @@ func GenerateSecret() (string, error) {
 	return base32.StdEncoding.EncodeToString(key), nil
 }
 
-// Authenticator側で生成するので、アプリケーションとしては不要
-func (t *TOTP) GenerateCode(ctx context.Context) (string, error) {
-	ts := ctxtime.Now(ctx).Unix()
-
-	counter := ts / t.Period
+func (t *TOTP) generateCodeAtTime(timestamp int64) (string, error) {
+	counter := timestamp / t.Period
 
 	secretBytes, err := base32.StdEncoding.DecodeString(strings.ToUpper(t.Secret))
 	if err != nil {
@@ -57,10 +54,9 @@ func (t *TOTP) GenerateCode(ctx context.Context) (string, error) {
 	hash := mac.Sum(nil)
 
 	offset := hash[len(hash)-1] & 0x0F
-	code := binary.BigEndian.Uint32(hash[offset:offset+4]) & 0x7FFFFFFF
+	totpCode := binary.BigEndian.Uint32(hash[offset:offset+4]) & 0x7FFFFFFF
 
-	otp := fmt.Sprintf("%0*d", t.Digits, code%uint32(math.Pow10(t.Digits)))
-	return otp, nil
+	return fmt.Sprintf("%0*d", t.Digits, totpCode%uint32(math.Pow10(t.Digits))), nil
 }
 
 func (t *TOTP) Verify(ctx context.Context, code string) bool {
@@ -68,24 +64,10 @@ func (t *TOTP) Verify(ctx context.Context, code string) bool {
 
 	for i := -1; i <= 1; i++ {
 		ts := baseTs + int64(i)*t.Period
-		counter := ts / t.Period
-
-		secretBytes, err := base32.StdEncoding.DecodeString(strings.ToUpper(t.Secret))
+		expectedCode, err := t.generateCodeAtTime(ts)
 		if err != nil {
 			return false
 		}
-
-		buf := make([]byte, 8)
-		binary.BigEndian.PutUint64(buf, uint64(counter))
-
-		mac := hmac.New(sha1.New, secretBytes)
-		mac.Write(buf)
-		hash := mac.Sum(nil)
-
-		offset := hash[len(hash)-1] & 0x0F
-		totpCode := binary.BigEndian.Uint32(hash[offset:offset+4]) & 0x7FFFFFFF
-
-		expectedCode := fmt.Sprintf("%0*d", t.Digits, totpCode%uint32(math.Pow10(t.Digits)))
 		if code == expectedCode {
 			return true
 		}
